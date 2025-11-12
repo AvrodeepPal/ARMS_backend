@@ -15,7 +15,7 @@ public class CustomerDTO {
 
     @NotBlank(message = "Username is required")
     private String username;
-
+    //private String password;
     private String address;
 
     @Pattern(regexp = "^\\d{10}$", message = "Phone number must be 10 digits")

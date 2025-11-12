@@ -20,6 +20,8 @@ public class Customer {
     private Long customerId;
 
     private String name;
+    private String password;
+    private String role;
     private String username;
     private String address;
     private String phone;
