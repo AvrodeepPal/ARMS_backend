@@ -1,6 +1,8 @@
 package com.example.airline.jwt;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
 
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -23,6 +25,16 @@ public class JwtRequestFilter extends OncePerRequestFilter {
     private final CustomUserDetailsService userDetailsService;
     private final JwtUtil jwtUtil;
 
+    // Public endpoints that don't need JWT authentication
+    private static final List<String> PUBLIC_URLS = Arrays.asList(
+        "/auth/login",
+        "/auth/register",
+        "/api/auth/login",
+        "/api/auth/register",
+        "/flights",
+        "/api/flights"
+    );
+
     public JwtRequestFilter(CustomUserDetailsService userDetailsService, JwtUtil jwtUtil) {
         this.userDetailsService = userDetailsService;
         this.jwtUtil = jwtUtil;
@@ -31,6 +43,14 @@ public class JwtRequestFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
+
+        String requestPath = request.getRequestURI();
+
+        // Skip JWT validation for public endpoints
+        if (isPublicEndpoint(requestPath)) {
+            filterChain.doFilter(request, response);
+            return;
+        }
 
         final String authorizationHeader = request.getHeader("Authorization");
 
@@ -61,5 +81,8 @@ public class JwtRequestFilter extends OncePerRequestFilter {
 
         filterChain.doFilter(request, response);
     }
-}
 
+    private boolean isPublicEndpoint(String requestPath) {
+        return PUBLIC_URLS.stream().anyMatch(requestPath::startsWith);
+    }
+}

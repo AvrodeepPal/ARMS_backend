@@ -12,6 +12,9 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import com.example.airline.ServiceImp.CustomUserDetailsService;
 import com.example.airline.jwt.JwtRequestFilter;
@@ -34,7 +37,6 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-    // Configure AuthenticationManager with userDetailsService and password encoder
     @Bean
     public AuthenticationManager authenticationManager(HttpSecurity http) throws Exception {
         AuthenticationManagerBuilder authBuilder =
@@ -44,18 +46,39 @@ public class SecurityConfig {
         return authBuilder.build();
     }
 
-    // Define security filter chain replacing configure(HttpSecurity)
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.addAllowedOrigin("http://localhost:5173");        // Frontend URL
+        configuration.addAllowedOrigin("http://localhost:3000");        // Alternative
+        configuration.addAllowedMethod("*");                            // All HTTP methods
+        configuration.addAllowedHeader("*");                            // All headers
+        configuration.setAllowCredentials(true);                        // Allow credentials
+        configuration.setMaxAge(3600L);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);         // Apply to all endpoints
+        return source;
+    }
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http.csrf(csrf -> csrf.disable())
-                .authorizeHttpRequests(authorize -> authorize
-                                .requestMatchers("/auth/**").permitAll()
-                                .anyRequest().authenticated()
-                )
-                .sessionManagement(session -> session
-                                .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-                )
-                .addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
+        http
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+            .csrf(csrf -> csrf.disable())
+            .authorizeHttpRequests(authorize -> authorize
+                .requestMatchers("/auth/**").permitAll()                    // Public: Login/Register
+                .requestMatchers("/api/auth/**").permitAll()               // Public: API Auth
+                .requestMatchers("/flights/**").permitAll()                // Public: Flights
+                .requestMatchers("/api/flights/**").permitAll()            // Public: API Flights
+                .requestMatchers("/bookings/**").permitAll()               // Public: Bookings (optional)
+                .requestMatchers("/api/bookings/**").permitAll()           // Public: API Bookings (optional)
+                .anyRequest().authenticated()
+            )
+            .sessionManagement(session -> session
+                .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+            )
+            .addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
